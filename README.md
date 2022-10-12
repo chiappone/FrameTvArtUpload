@@ -1,0 +1,1 @@
+Project that allows the user to convert and upload a JPEG right to your Samsung FrameTV
