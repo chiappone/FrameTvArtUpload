@@ -1,10 +1,11 @@
+from multiprocessing.connection import wait
+from time import sleep
 import PySimpleGUI as sg
 # import PySimpleGUIQt as sg
 import os.path
 import PIL.Image
 import io
 import base64
-
 import frametv_uploader
 import samsung_api
 
@@ -23,7 +24,7 @@ import samsung_api
 """
 
 sg.theme('dark grey 9')
-filename = ""
+#animate = True
 
 def convert_to_bytes(file_or_bytes, resize=None):
     '''
@@ -55,34 +56,29 @@ def convert_to_bytes(file_or_bytes, resize=None):
         del img
         return bio.getvalue()
 
-def do_upload(window):
-    print(f'File to upload {filename}')
-    sg.popup_animated(sg.DEFAULT_BASE64_LOADING_GIF, 'Uploading Image to FrameTV')
-    frametv_uploader.start_with_file(filename, True)
-    sg.popup_animated(None)
+def do_upload():
+    # print(f'File to upload {filename}')
+    frametv_uploader.start_with_file(filename, True, False)
 
-def test_connection(window):
-    sg.popup_animated(sg.DEFAULT_BASE64_LOADING_GIF, 'Connecting...', time_between_frames=100)
+def test_connection():
     try:
-        info = samsung_api.check_art_mode()
-        print(f'Samsung returned {info}')
+        samsung_api.check_art_mode()
         window['-TOUT-'].update('Connection Established')
     except Exception as E:
         print(f'Exception {E}')
         window['-TOUT-'].update('Connection Failure')
-    sg.popup_animated(None)
 
-def load_and_resize_image(window):
+def load_and_resize_image():
     try:
-        sg.popup_animated(sg.DEFAULT_BASE64_LOADING_GIF, 'Loading Image', time_between_frames=100)
-        filename = os.path.join(values['-FOLDER-'], values['-FILE LIST-'][0])
-        window['-TOUT-'].update(filename)
+        # print(f'File to resize {filename}')
         window['-IMAGE-'].update(data=convert_to_bytes(filename, resize=(3840, 2160)))
-        sg.popup_animated(None)
     except Exception as E:
         print(f'** Error {E} **')
         pass        # something weird happened making the full filename
 
+def show_loading_image(text):
+    sg.popup_animated(sg.DEFAULT_BASE64_LOADING_GIF, text, time_between_frames=100)
+    window.write_event_value('-ANIMATE-', text)
 
 # --------------------------------- Define Layout ---------------------------------
 
@@ -93,7 +89,7 @@ left_col = [[sg.Text('Folder'), sg.In(size=(25,1), enable_events=True ,key='-FOL
             [sg.Button('Test FrameTV Connection'), sg.Button('Upload')]]
 
 # For now will only show the name of the file that was chosen
-images_col = [[sg.Text(size=(40,1), key='-TOUT-')],
+images_col = [[sg.Text(size=(80,1), key='-TOUT-')],
               [sg.Image(key='-IMAGE-')]]
 
 # ----- Full layout -----
@@ -107,17 +103,23 @@ window = sg.Window('JPEG Image Uploader for FrameTV', layout,resizable=True)
 # --------------------------------- Event Loop ---------------------------------
 while True:
     event, values = window.Read(timeout=100)
+
     if event in (sg.WIN_CLOSED, 'Exit'):
         break
     if event == sg.WIN_CLOSED or event == 'Exit':
         break
-    if event == 'Upload':
-        window.write_event_value('-WAITING')
-        do_upload(window)
-    if event == 'Test FrameTV Connection':
-        waiting = True
-        window.perform_long_operation(test_connection(window), '-DONE')
-    if event == '-FOLDER-':                         # Folder name was filled in, make a list of files in the folder
+    if event == '-DONE-':
+        animate = False
+        sg.popup_animated(None)
+    elif event == 'Upload':
+        window.perform_long_operation(do_upload, '-DONE-')
+        animate = True
+        show_loading_image('Uploading to FrameTV')
+    elif event == 'Test FrameTV Connection':
+        window.perform_long_operation(test_connection, '-DONE-')
+        animate = True
+        show_loading_image('Connecting')
+    elif event == '-FOLDER-':                         # Folder name was filled in, make a list of files in the folder
         folder = values['-FOLDER-']
         try:
             file_list = os.listdir(folder)         # get list of files in folder
@@ -127,7 +129,16 @@ while True:
             os.path.join(folder, f)) and f.lower().endswith((".jpg", "jpeg"))]
         window['-FILE LIST-'].update(fnames)
     elif event == '-FILE LIST-':    # A file was chosen from the listbox
-        load_and_resize_image(window)
+        filename = os.path.join(values['-FOLDER-'], values['-FILE LIST-'][0])
+        window['-TOUT-'].update(filename)
+        window.perform_long_operation(load_and_resize_image, '-DONE-')
+        animate = True
+        show_loading_image('Loading Image')
+    elif event == '-ANIMATE-':
+        if animate:
+            show_loading_image(values.get(event))
+
+        
 
 # --------------------------------- Close & Exit ---------------------------------
 window.close()

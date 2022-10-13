@@ -145,47 +145,54 @@ def transform_image(im, img_filepath, id):
     new_dst.save(saved_filename)
     stretch_img.save(saved_stretch_filename)
 
-    if upload:
+    if upload_gd:
         gdrive_api.upload_jpeg(saved_filename)
         gdrive_api.upload_jpeg(saved_stretch_filename)
+    if upload_tv:
         samsung_api.upload_jpeg(saved_stretch_filename)
     
 
-def start_with_file(file, do_upload):
+def start_with_file(file, do_upload_tv, do_upload_gd):
     global artist
-    global upload
+    global upload_tv
+    global upload_gd
     img = Image.open(file)
     artist = "FrameTV"
-    upload = do_upload
+    upload_tv = do_upload_tv
+    upload_gd = do_upload_gd
     transform_image(img, file, 0)
 
 def main(argv):
 
     try:
         opts, args = getopt.getopt(
-            sys.argv[1:], "a:t:l:s:f:u", ["artist=", "type=", "list=", "search=", "file="])
+            sys.argv[1:], "a:t:l:s:f:gd:tv", ["artist=", "type=", "list=", "search=", "file="])
     except getopt.GetoptError as err:
         print(err)
         sys.exit(2)
 
     global artist
     global search
-    global upload
+    global upload_tv
+    global upload_gd
     met_csv_file = ""
     out_dir = ""
     list_file = ""
     artists = []
     types = []
     file = None
-    upload = False
+    upload_tv = False
+    upload_gd = False
     
 
     print("Opts")
     print(opts)
 
     for opt, arg in opts:
-        if opt == "-u":
-            upload = True
+        if opt == "-gd":
+            upload_gd = True
+        elif opt == "-tv":
+            upload_tv = True
         elif opt in ("--artist", "-a"):
             artists = arg.split(':')
             print("Artist in arg")

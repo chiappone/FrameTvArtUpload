@@ -8,7 +8,8 @@ sys.path.append('../')
 from samsungtvws import SamsungTVWS
 
 logging.basicConfig(level=logging.INFO)
-
+tv_ip = '192.168.7.249'
+tv_mac = 'a4:30:7a:3a:47:fd'
 
 def __runAllApi():
     # Increase debug level
@@ -81,8 +82,8 @@ def check_art_mode():
 
 def authenticate():
     token_file = os.path.dirname(os.path.realpath(__file__)) + '/tv-token.txt'
-    tv = SamsungTVWS(host='192.168.7.249', port=8002, token_file=token_file)
-    wakeonlan.send_magic_packet('a4:30:7a:3a:47:fd')
+    tv = SamsungTVWS(host=tv_ip, port=8002, token_file=token_file)
+    wakeonlan.send_magic_packet(tv_mac)
 
     return tv
     
