@@ -1,4 +1,5 @@
 from multiprocessing.connection import wait
+from operator import truediv
 from time import sleep
 import PySimpleGUI as sg
 # import PySimpleGUIQt as sg

@@ -9,12 +9,8 @@ import requests
 from PIL import Image
 from PIL import ImageFilter
 
-import gdrive_api
 import samsung_api
 
-request_uri = 'https://collectionapi.metmuseum.org'
-objects_request_uri = request_uri + "/public/collection/v1/objects/"
-search_request_uri = request_uri + "/public/collection/v1/search"
 
 def check_artists(artist, artists):
     if (len(artists) == 0):
@@ -58,45 +54,6 @@ def match_lines(met_csv, artists, types, list_file):
     return lines
 
 
-def search_by_artist(artists):
-    artist = artists[0]
-    params = {'q': artist, 'hasImages': 'true', 'artistOrCulture': artist}
-    response = requests.get(search_request_uri, params=params)
-
-    print(response.url)
-    print(response.content)
-
-    result = response.json() if response.status_code == 200 else None
-    print(f'Found {result["total"]} results\n')
-    object_ids = (result["objectIDs"])
-    return object_ids
-
-
-def get_objects(object_ids):
-    i = 1
-    for object_id in object_ids:
-        response = requests.get(objects_request_uri + str(object_id))
-        print(str(i) + "\n")
-        print(response.url)
-        result = response.json() if response.status_code == 200 else None
-        primary_image_url = (result["primaryImage"])
-        image_title = (result["title"])
-        medium = (result["objectName"])
-        print(medium)
-        dept = (result["department"])
-        print("Department=" + dept + "\n")
-        print(primary_image_url)
-        try:
-            search
-        except NameError:
-            download_image(primary_image_url, image_title, object_id)
-        else:
-            if search in image_title:
-                download_image(primary_image_url, image_title, object_id)
-
-        i += 1
-
-
 def download_image(image_url, image_name, id):
     response = requests.get(image_url, stream=True)
     im = Image.open(response.raw) if response.status_code == 200 else None
@@ -117,6 +74,7 @@ def transform_image(im, img_filepath, id):
     saved_filename = os.path.splitext(artist_file_path + "/" + img_filename[:100])[0] + str(id) + ".jpg"
     saved_stretch_filename = os.path.splitext(artist_file_path + "/" + img_filename[:100])[0] + str(id) + "_stretched.jpg"
     ratio = im_w / im_h
+    
     # check if image is 16:9 to apply transformation
     if (truncate(ratio, 2) != truncate(16 / 9, 2)):
         all_169 = False
@@ -129,6 +87,7 @@ def transform_image(im, img_filepath, id):
     # paste original image
     offset = ((bg_w - im_w) // 2, (bg_h - im_h) // 2)
     bg.paste(im, offset)
+
 
     # crop to 16:9
     left = (bg_w - floor(im_h * (16 / 9))) / 2
@@ -218,8 +177,6 @@ def main(argv):
         artist = artists[0]
         print("Artist to search for:")
         print(artist)
-        object_ids = search_by_artist(artists)
-        get_objects(object_ids)
 
 
 if __name__ == "__main__":
